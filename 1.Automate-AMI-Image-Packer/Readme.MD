@@ -91,12 +91,12 @@ Here is an example `packer.json` template:
   "_comment": "Packer template for creating an AMI with Docker, Nginx, Node Exporter, and Ansible",
   
   "variables": {
-    "region": "us-east-1",
-    "source_ami": "ami-0866a3c8686eaeeba", // Base AMI (Ubuntu)
-    "instance_type": "t2.micro",
-    "vpc_id": "vpc-036e5c5d11bdf83de",
-    "subnet_id": "subnet-05597e96c163e70fd",
-    "ssh_keypair_name": "your-ssh-key-name", // Ensure you have an existing SSH key pair in AWS
+    "region": "",
+    "source_ami": "", // Base AMI (Ubuntu)
+    "instance_type": "",
+    "vpc_id": "",
+    "subnet_id": "",  
+    "ssh_keypair_name": "", // Ensure you have an existing SSH key pair in AWS
     "ssh_private_key_file": "{{env `SSH_PRIVATE_KEY_FILE`}}", // Reference private key path from environment variable
     "ssh_public_key": "{{env `SSH_PUBLIC_KEY`}}" // Reference public key from environment variable
   },
@@ -187,20 +187,20 @@ Here is an example `packer.json` template:
 ```json
 {
   "region": "us-east-1",
-  "source_ami": "ami-0866a3c8686eaeeba",
-  "instance_type": "t2.micro",
-  "vpc_id": "vpc-036e5c5d11bdf83de",
-  "subnet_id": "subnet-05597e96c163e70fd",
-  "ssh_keypair_name": "your-ssh-key-name",  // Replace with your SSH key pair
-  "ssh_private_key_file": "{{env `SSH_PRIVATE_KEY_FILE`}}",  // Private key path (environment variable)
-  "ssh_public_key": "{{env `SSH_PUBLIC_KEY`}}"  // Public key for SSH (environment variable)
+  "source_ami": "ami-0866a3c8686eaeeba",     // replace with UBUNTU AMI id from aws console > ec2
+  "instance_type": "t2.micro",               // Replace if you want optional
+  "vpc_id": "vpc-036e5c5d11bdf83de",         // replace vpc_id 
+  "subnet_id": "subnet-05597e96c163e70fd",    // replace Public subnet id 
+  "ssh_keypair_name": "your-ssh-key-name",  // Replace with your SSH key pair (if you dont have create from aws ec2 dashboard)
+  "ssh_private_key_file": "{{env `SSH_PRIVATE_KEY_FILE`}}",  // Private key path (environment variable) - Generate using ssh-keygen 
+  "ssh_public_key": "{{env `SSH_PUBLIC_KEY`}}"  // Public key for SSH (environment variable) 
 }
 ```
 
 **Note**: For security reasons, do not hardcode your private or public keys in the template. Use environment variables to securely pass them at runtime.
 
 
-#### **Docker Service File (docker.service)**
+#### **3. Docker Service File (docker.service)**
 
 The `docker.service` file configures Docker to start with systemd, listening on both the Unix socket and a TCP port (`2375`).
 
