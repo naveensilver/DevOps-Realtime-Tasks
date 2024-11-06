@@ -1,0 +1,10 @@
+{
+    "region": "us-east-1",
+    "source_ami": "ami-0866a3c8686eaeeba",
+    "instance_type": "t2.micro",
+    "vpc_id": "vpc-036e5c5d11bdf83de",
+    "subnet_id": "subnet-05597e96c163e70fd", // Replace with your Public subnet ID 
+    "ssh_keypair_name": "your-ssh-key-name", // Replace with your SSH key pair 
+    "ssh_private_key_file": "{{env `SSH_PRIVATE_KEY_FILE`}}", // Private key path (environment variable)
+    "ssh_public_key": "{{env `SSH_PUBLIC_KEY`}}" // Public key for SSH (environment variable)
+}
