@@ -326,3 +326,175 @@ Once the build is complete, Packer will output the **AMI ID**. You can now use t
 ### **Conclusion**
 
 By following these steps, you've configured a **production-ready Packer template** to create a custom AMI with Docker, Node Exporter, and Ansible. You’ve also learned how to securely manage **AWS credentials** and **SSH keys**, validate the template, and automate the AMI creation process with **Packer**.
+
+---
+
+# Automate Above Process using CI/CD 
+
+To automate the process of building the AMI with **Packer** in a CI/CD pipeline, we can use **GitHub Actions**. GitHub Actions allows you to define workflows in YAML files and trigger them automatically based on events like commits or pull requests. We can integrate the process of validating and building the AMI using **Packer** inside GitHub Actions.
+
+### **Steps to Automate Packer in GitHub Actions**
+
+Let's break it down step-by-step:
+
+---
+
+### **1. Set Up AWS Credentials as GitHub Secrets**
+
+Before setting up the GitHub Actions workflow, ensure that your AWS credentials are securely stored in GitHub Secrets to allow the workflow to authenticate with AWS.
+
+1. Go to your GitHub repository.
+2. Click on **Settings** > **Secrets and Variables** > **Actions** > **New repository secret**.
+3. Add the following secrets:
+   - `AWS_ACCESS_KEY_ID`: Your AWS Access Key.
+   - `AWS_SECRET_ACCESS_KEY`: Your AWS Secret Key.
+   - `AWS_REGION`: The region where you want to build your AMI (e.g., `us-east-1`).
+   - `SSH_PRIVATE_KEY_FILE`: Path to your private key (or if you want to pass it as an environment variable).
+   - `SSH_PUBLIC_KEY`: Your SSH public key for the EC2 instance.
+
+---
+
+### **2. Create the GitHub Actions Workflow File**
+
+In your GitHub repository, create the GitHub Actions workflow file inside the `.github/workflows` directory. If this directory doesn't exist, create it.
+
+For example, create a new file: `.github/workflows/packer.yml`.
+
+Here's an example GitHub Actions workflow configuration:
+
+```yaml
+name: Build AMI with Packer
+
+on:
+  push:
+    branches:
+      - main  # Trigger this workflow on push to the main branch
+  pull_request:
+    branches:
+      - main  # Trigger this workflow on PR to the main branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Check out the code
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    # Step 2: Set up AWS credentials using GitHub Secrets
+    - name: Set up AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    # Step 3: Set up environment variables for SSH keys
+    - name: Set up SSH keys
+      run: |
+        echo "export SSH_PRIVATE_KEY_FILE=${{ secrets.SSH_PRIVATE_KEY_FILE }}" >> $GITHUB_ENV
+        echo "export SSH_PUBLIC_KEY=${{ secrets.SSH_PUBLIC_KEY }}" >> $GITHUB_ENV
+
+    # Step 4: Install Packer
+    - name: Install Packer
+      run: |
+        curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+        sudo apt update && sudo apt install packer
+
+    # Step 5: Validate the Packer template
+    - name: Validate Packer template
+      run: |
+        packer validate --var-file=vars.json packer.json
+
+    # Step 6: Build the AMI using Packer
+    - name: Build AMI with Packer
+      run: |
+        packer build --var-file=vars.json packer.json
+
+    # Step 7: Clean up any resources or temporary files (optional)
+    - name: Clean up
+      run: |
+        rm -rf packer_cache  # Remove any unnecessary files
+```
+
+### **Explanation of the Workflow:**
+
+1. **Trigger**: 
+   - The workflow triggers on **push** or **pull request** events to the `main` branch. You can modify this based on your requirements.
+
+2. **Checkout Code**:
+   - This step checks out the code from the GitHub repository so that we can work with the Packer files and configuration.
+
+3. **Set up AWS Credentials**:
+   - The action `aws-actions/configure-aws-credentials@v1` sets up your AWS credentials using the GitHub secrets you stored. This allows Packer to interact with AWS without hardcoding your credentials.
+
+4. **Set up SSH Keys**:
+   - Here, we use GitHub Secrets to set up the **SSH_PRIVATE_KEY_FILE** and **SSH_PUBLIC_KEY** as environment variables. These are passed to Packer to use during the AMI creation process.
+
+5. **Install Packer**:
+   - Packer is installed on the runner using the package manager. This step is necessary because GitHub runners don't come with Packer pre-installed.
+
+6. **Validate Packer Template**:
+   - The `packer validate` command ensures that your Packer template (`packer.json`) is valid before proceeding to build the AMI. This helps catch errors early.
+
+7. **Build AMI with Packer**:
+   - The `packer build` command actually builds the AMI, using the configuration from `packer.json` and the variables defined in `vars.json`. The result will be an AMI ID that can be used in your infrastructure.
+
+8. **Clean up (Optional)**:
+   - This step is optional but useful for cleaning up any temporary files or resources that might have been created during the build process.
+
+---
+
+### **3. Store the Necessary Files in Your GitHub Repository**
+
+You should have the following files in your repository:
+
+- **`packer.json`**: The main Packer template to build the AMI.
+- **`vars.json`**: The variables file that contains your configuration settings (e.g., VPC, Subnet, instance type).
+- **`docker.service`**: The systemd service file for Docker.
+- **`node_exporter.service`**: The systemd service file for Node Exporter.
+
+These files should be in the root directory or a folder like `/packer` inside your repository, depending on your organization.
+
+---
+
+### **4. Testing the Workflow**
+
+Once everything is set up, push your changes to GitHub or create a pull request to trigger the workflow.
+
+```bash
+git add .
+git commit -m "Setup Packer CI/CD Pipeline with GitHub Actions"
+git push origin main
+```
+
+GitHub will automatically trigger the action and start the AMI build process as per the workflow file. You can view the logs of the job in the **Actions** tab of your GitHub repository.
+
+---
+
+### **5. Monitor the Build Process**
+
+1. Navigate to the **Actions** tab in your GitHub repository.
+2. Select the latest workflow run and monitor the logs to check for any errors or confirmation that the AMI build was successful.
+3. If the build is successful, the AMI will be created in the specified AWS region. The AMI ID will be output in the logs of the build step.
+
+---
+
+### **6. Use the Custom AMI**
+
+After the workflow completes, you can find the AMI ID from the **build logs** and use it to launch new EC2 instances. You can also modify the workflow to output the AMI ID as part of the job summary or store it in an artifact.
+
+---
+
+### **Additional Enhancements and Tips**
+
+- **Versioning**: Use versioning for your AMIs, either by including a timestamp in the AMI name or by using unique identifiers.
+- **Notifications**: You can integrate notifications (e.g., Slack, email) when the build is successful or fails.
+- **Testing**: Create a post-build step to test the AMI (e.g., run a smoke test in the instance created from the AMI).
+
+---
+
+### **Conclusion**
+
+By following these steps, you can automate the entire process of building and managing your custom AWS AMIs using **Packer** in **GitHub Actions**. This approach ensures that your infrastructure is reproducible, consistent, and integrated into your CI/CD pipeline.
